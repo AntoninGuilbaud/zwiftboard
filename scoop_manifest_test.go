@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"os"
 	"os/exec"
 	"testing"
 )
@@ -103,6 +105,31 @@ func TestScoopManifestValuesAreLiteral(t *testing.T) {
 	}
 	if got := m.Architecture["64bit"].Hash; got != hash {
 		t.Errorf("hash = %q, want the literal %q", got, hash)
+	}
+}
+
+func TestBucketManifestInSync(t *testing.T) {
+	requireJust(t)
+	raw, err := os.ReadFile("bucket/zwiftboard.json")
+	if err != nil {
+		t.Fatalf("read bucket/zwiftboard.json: %v", err)
+	}
+	var m struct {
+		Version      string `json:"version"`
+		Architecture map[string]struct {
+			Hash string `json:"hash"`
+		} `json:"architecture"`
+	}
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatalf("bucket manifest is not valid JSON: %v", err)
+	}
+	hash := m.Architecture["64bit"].Hash
+	out, err := exec.Command("just", "scoop-manifest", m.Version, hash).Output()
+	if err != nil {
+		t.Fatalf("script failed: %v", err)
+	}
+	if !bytes.Equal(bytes.TrimSpace(out), bytes.TrimSpace(raw)) {
+		t.Errorf("bucket/zwiftboard.json is stale; run: just scoop-manifest %s %s > bucket/zwiftboard.json", m.Version, hash)
 	}
 }
 

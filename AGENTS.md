@@ -88,6 +88,10 @@ the TUI key-state model, pod states, the log buffer and the config-path tests.
   the CONTRIBUTING guide requires (fork PRs are not auto-verified on open). The
   very first manifest is a NEW package: Extras wants a package-request issue
   approved before the initial PR, which this automation cannot file for you.
+  A separate `bucket` job (same trigger, no PAT) renders the same manifest into
+  `bucket/zwiftboard.json` and commits it straight back to `main`, so the repo
+  itself works as a personal scoop bucket
+  (`scoop bucket add zwiftboard https://github.com/thomaschampagne/zwiftboard`).
   Release assets are
   `zwiftboard.exe` / `zwiftboard.zip` / `checksums.txt`; emulate the build +
   manifest locally with `just scoop-release <version>` (needs `zip` +

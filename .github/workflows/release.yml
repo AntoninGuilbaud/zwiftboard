@@ -81,6 +81,47 @@ jobs:
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
 
+  # Personal scoop bucket: this repo IS the bucket (scoop bucket add <name>
+  # <repo-url>), so the manifest is committed straight back to main on every
+  # release — no PAT, no PR. Independent of the Extras job below.
+  bucket:
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the manifest commit
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true # push back with GITHUB_TOKEN
+      - uses: extractions/setup-just@v4
+      - name: Read the release checksum
+        id: hash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ needs.release.outputs.tag }}" --pattern checksums.txt --dir "$RUNNER_TEMP"
+          sha=$(awk '$2 == "zwiftboard.exe" { print $1 }' "$RUNNER_TEMP/checksums.txt")
+          [ -n "$sha" ] || { echo "no zwiftboard.exe hash in checksums.txt"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Render bucket manifest
+        run: |
+          just scoop-manifest \
+            "${{ needs.release.outputs.tag }}" \
+            "${{ steps.hash.outputs.sha }}" \
+            > bucket/zwiftboard.json
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bucket/
+          if git diff --cached --quiet; then
+            echo "bucket manifest already up to date"
+          else
+            git commit -m "scoop: update bucket manifest for ${{ needs.release.outputs.tag }}"
+            git push origin HEAD:main
+          fi
+
   scoop:
     needs: release
     if: needs.release.outputs.published == 'true'
