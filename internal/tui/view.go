@@ -1,0 +1,348 @@
+package tui
+
+import (
+	"strconv"
+	"strings"
+	"time"
+
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
+)
+
+// Palette. ANSI-256 numbers so it degrades on 256-colour terminals.
+var (
+	cAccent = lipgloss.Color("75")  // blue
+	cOK     = lipgloss.Color("42")  // green
+	cWarn   = lipgloss.Color("214") // amber
+	cBad    = lipgloss.Color("203") // red
+	cMuted  = lipgloss.Color("244")
+	cCap    = lipgloss.Color("238") // keycap background
+
+	// Pod-mark colours: the four dots of the Click V2 app icon — cyan on top,
+	// orange and green on the middle row, magenta below.
+	cDotTop    = lipgloss.Color("45")
+	cDotLeft   = lipgloss.Color("208")
+	cDotRight  = lipgloss.Color("42")
+	cDotBottom = lipgloss.Color("201")
+
+	sTitle   = lipgloss.NewStyle().Bold(true).Foreground(cAccent)
+	sMuted   = lipgloss.NewStyle().Foreground(cMuted)
+	sOK      = lipgloss.NewStyle().Foreground(cOK)
+	sWarn    = lipgloss.NewStyle().Foreground(cWarn)
+	sBad     = lipgloss.NewStyle().Foreground(cBad)
+	sBold    = lipgloss.NewStyle().Bold(true)
+	sKeycap  = lipgloss.NewStyle().Background(cCap).Padding(0, 1)
+	sDown    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("16")).Background(cOK).Padding(0, 1)
+	sHold    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("16")).Background(cWarn).Padding(0, 1)
+	sChip    = lipgloss.NewStyle().Foreground(lipgloss.Color("16")).Background(cAccent).Padding(0, 1)
+	sKeyHint = lipgloss.NewStyle().Foreground(cAccent).Bold(true)
+	// sReleased gets the same Padding(0,1) as sDown/sHold so "○ released"
+	// fills the same 12-column status cell as the other two states.
+	sReleased = lipgloss.NewStyle().Foreground(cMuted).Padding(0, 1)
+)
+
+const (
+	minWidth     = 40
+	maxWidth     = 120 // cards (was 100; widened for the shortcut hints in the footer)
+	maxLogWidth  = 320 // the log panel may use the whole terminal (double the old 160 cap)
+	defaultWidth = 80  // before the first WindowSizeMsg
+	logLines     = 10
+	// keycapW is the fixed keycap cell width, so the status column starts at
+	// the same offset on every row whatever the token length ("a" vs the
+	// longest valid token, "backspace").
+	keycapW = 9
+)
+
+// innerWidth is the usable width inside a card, following the terminal.
+func (m Model) innerWidth() int { return m.innerWidthMax(maxWidth) }
+
+func (m Model) innerWidthMax(limit int) int {
+	w := defaultWidth
+	if m.width > 0 {
+		w = m.width
+	}
+	if limit == maxLogWidth && m.width == 0 {
+		w = maxWidth // no size yet: keep the logs card as wide as the others
+	}
+	if w > limit {
+		w = limit
+	}
+	if w < minWidth {
+		w = minWidth
+	}
+	return w - 4 // border + padding
+}
+
+// card draws a rounded box with a title line.
+func (m Model) card(color lipgloss.Color, title, body string) string {
+	return m.cardW(m.innerWidth(), color, title, body)
+}
+
+func (m Model) cardW(inner int, color lipgloss.Color, title, body string) string {
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(color).
+		Padding(0, 1).
+		Width(inner + 2)
+	if title == "" {
+		return box.Render(body)
+	}
+	head := lipgloss.NewStyle().Bold(true).Foreground(color).Render(title)
+	return box.Render(head + "\n" + body)
+}
+
+func podLine(side string, s PodState) string {
+	name := side + " Controller"
+	switch s {
+	case PodConnected:
+		return sOK.Render("● " + name + ": connected")
+	case PodDetected:
+		return sWarn.Render("◐ " + name + ": detected, connecting…")
+	default:
+		// The prompt sits right after the state so the fix is on the same line.
+		return sBad.Render("○ "+name+": not detected") + sWarn.Render(" → please activate the "+name)
+	}
+}
+
+// View renders the screen. With Bluetooth off nothing else is shown: setup
+// halts until the radio is on. Alt-screen and mouse cell-motion are View
+// fields in Bubble Tea v2 (the v1 program options are gone).
+func (m Model) View() tea.View {
+	var b strings.Builder
+	b.WriteString(m.header() + "\n")
+
+	if !m.bt {
+		body := sBad.Render("○ Bluetooth is OFF") + "\n" +
+			sWarn.Render("Please turn Bluetooth ON") + sMuted.Render(" (Windows: Settings > Bluetooth & devices)") + "\n" +
+			sMuted.Render("Waiting for it — this screen updates by itself.")
+		b.WriteString(m.card(cBad, "Bluetooth", body) + "\n")
+		b.WriteString(m.logsPanel())
+		b.WriteString(m.footer())
+		return screen(b.String())
+	}
+
+	b.WriteString(m.banner() + "\n")
+	if a := m.focusAlert(); a != "" {
+		b.WriteString(a + "\n")
+	}
+
+	pods := sOK.Render("● Bluetooth: ON") + "\n" + podLine("Left", m.left) + "\n" + podLine("Right", m.right)
+	b.WriteString(m.card(cAccent, "Status", pods) + "\n")
+	b.WriteString(m.card(cAccent, "Right Click V2 · key bindings", m.table()) + "\n")
+	b.WriteString(m.logsPanel())
+	b.WriteString(m.footer())
+	return screen(b.String())
+}
+
+// screen wraps rendered content in the v2 View, setting the terminal modes
+// the program used to receive as options.
+func screen(content string) tea.View {
+	v := tea.NewView(content)
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
+}
+
+// podLogo renders the four-dot pod mark: the app icon's dots (cyan, orange,
+// green, magenta) packed on one line, in front of the title.
+func podLogo() string {
+	dot := func(c lipgloss.Color) string {
+		return lipgloss.NewStyle().Foreground(c).Render("●")
+	}
+	return dot(cDotTop) + " " + dot(cDotLeft) + " " + dot(cDotRight) + " " + dot(cDotBottom)
+}
+
+func (m Model) header() string {
+	title := sTitle.Render("zwiftboard")
+
+	profile := m.cfg.Profile
+	if profile != "" && len(m.cfg.Profiles) > 1 {
+		// Show the position so a switch is obvious even when names are similar.
+		profile += " " + strconv.Itoa(m.cfg.ProfileIndex+1) + "/" + strconv.Itoa(len(m.cfg.Profiles))
+	}
+	version := m.cfg.Version
+
+	// Show both profile and version
+	if profile != "" && version != "" {
+		title += "  " + sChip.Render(profile) + sMuted.Render(" (version "+version+")")
+	} else if version != "" {
+		// Show version number in parentheses if no profile
+		title += sMuted.Render(" version ") + sMuted.Render("("+version+")")
+	} else if profile != "" {
+		// Show only profile if no version
+		title += "  " + sChip.Render(profile)
+	}
+
+	return podLogo() + " " + title
+}
+
+func (m Model) table() string {
+	var b strings.Builder
+	if m.cfg.NoMapping {
+		b.WriteString(sMuted.Render("no key mapping — button logging only"))
+	} else {
+		for _, name := range m.cfg.Buttons {
+			key, ok := m.cfg.Bindings[name]
+			// Fixed-width keycap cell (keycapW): the status column starts at
+			// the same offset whatever the token, in every phase.
+			cap := sMuted.Render("—" + strings.Repeat(" ", keycapW-1))
+			label := ""
+			var style lipgloss.Style
+			if ok {
+				tok := padRight(key, keycapW)
+				cap = sKeycap.Render(tok)
+				switch m.keyPhase(name) {
+				case PhasePressed:
+					cap = sDown.Render(tok)
+					label, style = "▶ pressed", sDown
+				case PhaseHold:
+					cap = sHold.Render(tok)
+					label, style = pulse(m.now())+" hold", sHold
+				case PhaseReleased:
+					label, style = "○ released", sReleased
+				}
+			}
+			out := padRight(label, 12)
+			if label != "" {
+				out = style.Render(padRight(label, 12))
+			}
+			b.WriteString(sBold.Render(padRight(name, 6)) + sMuted.Render("→ ") + cap + "  " + out + "\n")
+		}
+	}
+	focus := sMuted.Render("off")
+	if m.cfg.Focus != "" {
+		focus = sBold.Render(m.cfg.Focus)
+		if m.focusMissing {
+			focus += sBad.Render("  ✗ not found")
+		}
+	}
+	out := strings.TrimRight(b.String(), "\n") + "\n\n" + sMuted.Render("Auto-focus window on click starting with name: ") + focus
+	if m.cfg.StartProgram != "" {
+		out += "\n" + sMuted.Render("Start program on activation: ") + sBold.Render(m.cfg.StartProgram)
+	}
+	return out
+}
+
+func (m Model) logsPanel() string {
+	if !m.showLogs {
+		return ""
+	}
+	var lines []string
+	if m.cfg.Logs != nil {
+		m.clampLogScroll()
+		lines = m.cfg.Logs.Window(logLines, m.logOffset)
+	}
+	var body string
+	if len(lines) == 0 {
+		body = sMuted.Render("no log output yet")
+		if m.cfg.Logs == nil {
+			body = sMuted.Render("no log output available")
+		}
+	} else {
+		if len(lines) > logLines {
+			lines = lines[len(lines)-logLines:]
+		}
+		w := m.innerWidthMax(maxLogWidth)
+		for i, l := range lines {
+			lines[i] = sMuted.Render(ansi.Truncate(l, w, "…"))
+		}
+		body = strings.Join(lines, "\n")
+	}
+	title := "Logs"
+	if m.cfg.Logs != nil && m.cfg.Logs.Len() > logLines {
+		title += sMuted.Render(" — k/j or mouse wheel to scroll")
+	}
+	if m.logOffset > 0 {
+		title += sWarn.Render("  ▲ scrolled up")
+	}
+	return m.cardW(m.innerWidthMax(maxLogWidth), cMuted, title, body) + "\n"
+}
+
+func (m Model) footer() string {
+	status := ""
+	if m.status != "" {
+		status = sWarn.Render(m.status) + "\n"
+	}
+	hint := func(k, label string) string { return sKeyHint.Render(k) + sMuted.Render(" "+label) }
+	logs := hint("l", "logs")
+	if m.showLogs {
+		logs = hint("l", "hide logs")
+	}
+	f := logs
+	if m.cfg.OpenConfig != nil {
+		f += sMuted.Render("  ·  ") + hint("e", "edit config")
+	}
+	if m.cfg.Reload != nil {
+		f += sMuted.Render("  ·  ") + hint("r", "reload config")
+	}
+	if m.cfg.LaunchProgram != nil && m.cfg.StartProgram != "" {
+		f += sMuted.Render("  ·  ") + hint("s", "start program")
+	}
+	if m.cfg.SwitchProfile != nil && len(m.cfg.Profiles) > 1 {
+		f += sMuted.Render("  ·  ") + hint("ctrl+←/→", "switch profile")
+	}
+	f += sMuted.Render("  ·  ") + hint("q", "quit")
+	if m.cfg.Demo {
+		f += sMuted.Render("  ·  demo: ") + hint("b", "bluetooth") + sMuted.Render(" ") +
+			hint("[ ]", "left/right pod") + sMuted.Render(" ") + hint("1-5", "click") + sMuted.Render(" ") + hint("f", "focus alert")
+	}
+	return status + f
+}
+
+// padRight pads s with spaces to n display cells (not bytes): labels carry
+// multibyte glyphs (▶, ○, the braille pulse), and byte counting misaligned them.
+func padRight(s string, n int) string {
+	if w := ansi.StringWidth(s); w < n {
+		s += strings.Repeat(" ", n-w)
+	}
+	return s
+}
+
+// pulseFrames advance one frame per holdTick: the braille spinner is the
+// "key is repeating" motion cue while a key is held.
+var pulseFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+
+// pulse picks the current spinner frame. The division and the modulo stay in
+// int64 and the result is made non-negative before indexing: converting the
+// raw quotient to int first can wrap negative on 32-bit, and a negative frame
+// index would panic.
+func pulse(now time.Time) string {
+	i := now.UnixNano() / int64(holdTick) % int64(len(pulseFrames))
+	if i < 0 {
+		i += int64(len(pulseFrames))
+	}
+	return pulseFrames[i]
+}
+
+var (
+	sChipOK   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("16")).Background(cOK).Padding(0, 1)
+	sChipWarn = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("16")).Background(cWarn).Padding(0, 1)
+	sChipBad  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("16")).Background(cBad).Padding(0, 1)
+)
+
+// banner is the one-glance state: a coloured chip plus a headline, with the
+// supporting rule in a muted second line. Colour is never the only signal —
+// the chip carries the word (READY / WAITING).
+func (m Model) banner() string {
+	if m.left == PodConnected && m.right == PodConnected {
+		return m.cardW(m.innerWidth(), cOK, "",
+			sChipOK.Render("READY")+" "+sBold.Render("Both controllers connected")+"\n"+
+				sMuted.Render("Only the Right controller is supported as a virtual keyboard"))
+	}
+	return m.cardW(m.innerWidth(), cWarn, "",
+		sChipWarn.Render("WAITING")+" "+sBold.Render("Both controllers must be ON")+"\n"+
+			sMuted.Render("Only the Right one sends clicks; the Left one just has to stay on."))
+}
+
+// focusAlert is shown when a focus window is configured but not running:
+// keys.Down drops every click in that case, so the user must know why nothing
+// happens.
+func (m Model) focusAlert() string {
+	if m.cfg.Focus == "" || !m.focusMissing {
+		return ""
+	}
+	return m.cardW(m.innerWidth(), cBad, "",
+		sChipBad.Render("ALERT")+" "+sBold.Render(`Focus window "`+m.cfg.Focus+`" not found`)+"\n"+
+			sMuted.Render("Key clicks are dropped until it is open."))
+}

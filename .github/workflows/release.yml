@@ -1,0 +1,132 @@
+name: Release
+
+# semantic-release: conventional commits on main decide the next semver
+# (feat -> minor, fix/perf -> patch, BREAKING CHANGE -> major), tag X.Y.Z,
+# create the GitHub Release, and attach the Windows build.
+# Runs only after the CI checks pass on the same commit.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # tag + release
+      issues: write
+      pull-requests: write
+    outputs:
+      published: ${{ steps.detect.outputs.published }}
+      tag: ${{ steps.detect.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # semantic-release needs full history + tags
+          persist-credentials: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: extractions/setup-just@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      # No baseline tag is seeded: with no prior semver tag semantic-release's
+      # first release is 1.0.0 regardless of commit types. Seeding a 1.0.0 tag
+      # instead made it the "previous release", so the first `feat` shipped
+      # 1.1.0. Pre-existing non-semver tags (STABLE*) are ignored.
+      - name: Capture pre-release tag
+        id: before
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "tag=$(gh release view --json tagName -q .tagName 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+      # No baseline tag is seeded: with no prior semver tag semantic-release's
+      # first release is 1.0.0 regardless of commit types. Seeding a 1.0.0 tag
+      # instead made it the "previous release", so the first `feat` shipped
+      # 1.1.0. Pre-existing non-semver tags (STABLE*) are ignored.
+      - name: semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          npx --yes
+          -p semantic-release@25
+          -p @semantic-release/exec@7
+          semantic-release
+      - name: Detect new release
+        id: detect
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BEFORE: ${{ steps.before.outputs.tag }}
+        run: |
+          for i in 1 2 3; do
+            after=$(gh release view --json tagName -q .tagName) && break
+            sleep 3
+          done
+          [ -n "$after" ] || { echo "could not read the latest release"; exit 1; }
+          if [ -n "$after" ] && [ "$after" != "$BEFORE" ]; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$after" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  scoop:
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: extractions/setup-just@v4
+      - name: Checkout ScoopInstaller/Extras
+        uses: actions/checkout@v4
+        with:
+          repository: ScoopInstaller/Extras
+          ref: master
+          path: extras
+          persist-credentials: false
+      - name: Read the release checksum
+        id: hash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ needs.release.outputs.tag }}" --pattern checksums.txt --dir "$RUNNER_TEMP"
+          sha=$(awk '$2 == "zwiftboard.exe" { print $1 }' "$RUNNER_TEMP/checksums.txt")
+          [ -n "$sha" ] || { echo "no zwiftboard.exe hash in checksums.txt"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Render manifest
+        run: |
+          just scoop-manifest \
+            "${{ needs.release.outputs.tag }}" \
+            "${{ steps.hash.outputs.sha }}" \
+            > extras/bucket/zwiftboard.json
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.SCOOP_EXTRAS_PAT }}
+          path: extras
+          push-to-fork: ${{ github.repository_owner }}/Extras
+          base: master
+          branch: zwiftboard-${{ needs.release.outputs.tag }}
+          commit-message: "zwiftboard ${{ needs.release.outputs.tag }}"
+          title: "zwiftboard@${{ needs.release.outputs.tag }}: Add version ${{ needs.release.outputs.tag }}"
+          body: |
+            Adds the zwiftboard ${{ needs.release.outputs.tag }} manifest.
+
+            - Asset: `zwiftboard.exe`
+            - sha256: `${{ steps.hash.outputs.sha }}`
+            - Homepage: https://github.com/thomaschampagne/zwiftboard
+
+            Generated automatically on release. See the
+            [contributing guide](https://github.com/ScoopInstaller/.github/blob/main/.github/CONTRIBUTING.md).
+          delete-branch: true

@@ -1,0 +1,359 @@
+<div align="center">
+  <img src="res/icon/zwiftboard-256.png" width="110" alt="zwiftboard icon">
+  <h1>zwiftboard</h1>
+  <p><strong>Your Zwift Click V2 controller as a Bluetooth keyboard.</strong></p>
+  <p>
+    <a href="https://github.com/thomaschampagne/zwiftboard/actions/workflows/ci.yml"><img src="https://github.com/thomaschampagne/zwiftboard/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+    <a href="https://github.com/thomaschampagne/zwiftboard/releases/latest"><img src="https://img.shields.io/github/v/release/thomaschampagne/zwiftboard?sort=semver" alt="Latest release"></a>
+    <a href="https://scoop.sh"><img src="https://img.shields.io/badge/scoop-extras-4B8BBE" alt="Scoop (extras bucket)"></a>
+    <img src="https://img.shields.io/badge/platform-Windows-0078D4" alt="Platform: Windows">
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/thomaschampagne/zwiftboard" alt="License: MIT"></a>
+  </p>
+</div>
+
+Zwift Click V2 is an inexpensive wireless BLE controller pair but Zwift locks it to their app. `zwiftboard` unlocks it: connect over Bluetooth, press a button, and it **types real keyboard keys**.
+
+> **Only the RIGHT pod fires keys.** The Click V2 is a pair and zwiftboard keeps
+> _both_ pods connected, but the mapped buttons all live on the RIGHT pod
+> (`Y` `Z` `A` `B` `PLUS`). The LEFT pod's arrows/minus are not used — it just
+> has to stay switched on so the pair's link stays alive.
+
+- **Any program works** - MyWhoosh (with shifting, steering, cameras, ...), TrainerRoad, Wahoo SYSTM, or any executable you can map.
+- **No tricks** - no Zwift account, no 24h controller unlock. Works out of the box.
+- **Free** - no paid features, no subscriptions like some others implementations.
+- **Profiles** - configurable with pre-built profiles per platform.
+- **Program Auto-Focus (Optional)** - `zwiftboard` can bring the program to the foreground before every keypress, so clicks land in the configured program, not the wrong window.
+- **Scope** - Zwift Click V2 only, Windows only.
+
+---
+
+## Install
+
+Windows users can install with [Scoop](https://scoop.sh) from the community
+[extras](https://github.com/ScoopInstaller/Extras) bucket:
+
+```powershell
+scoop bucket add extras
+scoop install extras/zwiftboard
+```
+
+`scoop update zwiftboard` picks up each new release. Manual downloads remain
+available on the [Releases](../../releases) page.
+
+## Quick start
+
+1. **Download** the latest release: grab `zwiftboard.exe` from the
+   [Releases](../../releases) page. The config file is created on first run at
+   `%LocalAppData%\zwiftboard\config.yml`.
+2. **Close Zwift / the Companion app** — each controller accepts only one BLE
+   connection at a time.
+3. **Run it** and press a button on each controller while it scans to wake them — the mapped keys come from the **RIGHT** pod:
+
+   ```
+   zwiftboard.exe                 # startup profile: `defaultProfile:` from the config (ships as notepad)
+   zwiftboard.exe -p trainerroad  # pick another profile
+   zwiftboard.exe -v              # debug logging (raw frames, services)
+   ```
+
+   ```
+   time=... level=INFO msg="profile loaded" profile=notepad bindings=5
+   time=... level=INFO msg="key mapping" button=PLUS key=k
+   time=... level=INFO msg=button controller=zwift/86:04 button=PLUS state=pressed key=k
+   ```
+
+Press a button during a scan burst to wake a controller. Scanning never gives
+up: a controller switched on 10 minutes later still gets picked up.
+
+## Configuration
+
+The config lives at `%LocalAppData%\zwiftboard\config.yml` (or pass `-config`;
+an explicit path must already exist). The default file is created on first run,
+and a config from the old location next to the exe is migrated there. One file:
+`loglevel:`, an optional `defaultProfile:`, and a `profiles:` map.
+
+```yaml
+loglevel: info # debug | info | warn | error
+defaultProfile: notepad # profile used when -p is not passed; must exist
+
+profiles:
+  mywhoosh: # pick with -p mywhoosh
+    PLUS: k # gear down
+    A: right # steer right
+    B: i # gear up
+    Y: u # U-turn / minimal UI
+    Z: left # steer left
+
+  my-zwift-setup: # add your own — any name works
+    focusProgramNamePrefixOnClick: ZwiftApp
+    A: space
+    B: esc
+```
+
+**Key tokens:** `a-z`, `0-9`, `f1`–`f12`, named keys
+(`up down left right enter space tab esc backspace delete insert home end
+pageup pagedown shift ctrl alt capslock`), and single punctuation
+``- = , . / ; ' [ ] ` \`` (quote punctuation that is also YAML syntax, as
+above).
+
+If the default config can't be created or read, zwiftboard still runs and logs
+every press — you just don't get keystrokes. An explicit `-config` is the
+exception: it must already exist and is a fatal error if it doesn't.
+
+### Focus a program on click
+
+By default keys go to whichever window has focus, like a real keyboard. To make
+every click land in the cycling app even if another window stole focus, tell
+zwiftboard which program to bring forward first — per profile, since each game
+window is different:
+
+```yaml
+profiles:
+  mywhoosh:
+    focusProgramNamePrefixOnClick: MyWhoosh # window title contains "MyWhoosh" (or .exe prefix: MyWhooshHD.exe)
+  trainerroad:
+    focusProgramNamePrefixOnClick: null # disabled (default): keys → focused window
+```
+
+The value matches the window title (case-insensitive contains) or the start of
+the program `.exe` name (case-insensitive prefix) — so `MyWhoosh` matches
+`MyWhooshHD.exe`. On each button press the matching window is restored (if
+minimized) and brought to the foreground, then the key is tapped into it. If
+no window matches, the tap is **dropped and a warning logged** — zwiftboard
+never types into an unrelated app. Windows remembers the focused window, so
+the game stays in front for the whole ride.
+
+### Start a program with a profile
+
+Launch your cycling app automatically once Bluetooth is up — per profile, so each
+setup starts its own program. The `startProgram` value accepts:
+
+- an `.exe` path (`C:\Zwift\ZwiftApp.exe`);
+- a bare `.exe` name (`MyWhooshHD.exe`), resolved via `PATH` / App Paths;
+- a `.bat` or `.cmd` script;
+- a `.ps1` PowerShell script;
+- an MS Store AUMID (`PackageFamilyName!AppId`), e.g. `MyWhoosh.MyWhoosh_abc!App`.
+
+```yaml
+profiles:
+  mywhoosh:
+    startProgram: MyWhooshHD.exe
+  my-zwift-setup:
+    startProgram: MyWhoosh.MyWhoosh_abc!App # MS Store app (AUMID)
+```
+
+`null` (or absent) disables it. It starts once Bluetooth is up. A missing path
+logs a warning and is skipped; an already-running program is left alone.
+
+To find a Store app's AUMID, open PowerShell and copy the **AppID** column of:
+
+```powershell
+Get-StartApps | Sort-Object Name | Format-Table -AutoSize
+# or filter:  Get-StartApps | Where-Object Name -like '*whoosh*'
+```
+
+The app must be installed for the current user.
+
+### Switch profile at runtime
+
+While the status screen is running, move through the profiles without a restart
+or a BLE reconnect:
+
+- `ctrl+left` / `ctrl+right` — previous / next profile;
+- `ctrl+n` / `ctrl+p` — same, for terminals that do not report modified keys.
+
+The config file is re-read on every switch, so a profile you just edited is
+picked up: the button map, `focusProgramNamePrefixOnClick` and `startProgram`
+apply immediately (`loglevel:` still needs a restart). A held key is released
+first, so nothing sticks across a switch; if the config no longer parses, the
+screen shows the error and the current profile stays active. Neither the
+controllers nor their connection are touched.
+
+`ctrl+left` / `ctrl+right` need a terminal that reports keyboard-enhancement
+sequences (kitty/CSI-u); the `ctrl+n` / `ctrl+p` fallbacks work everywhere.
+
+### Other status-screen keys
+
+- `r` — reload `config.yaml` and apply it to the current profile live (no
+  restart, no BLE reconnect; `loglevel:` still needs a restart);
+- `s` — start the current profile's `startProgram` again (e.g. after you closed
+  it); hidden when the profile has no `startProgram`;
+- `l` — show/hide the log panel (`k`/`j` or the mouse wheel scroll it);
+- `e` — open the config file in your editor;
+- `q` (or `ctrl+c`) — quit.
+
+## Usage
+
+```
+zwiftboard [flags]
+```
+
+| Flag       | Default                                | Meaning                                                                                                    |
+| ---------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `-p`       | config `defaultProfile:`, else `mywhoosh` | Startup profile (must exist in the config; unknown name errors with the list). Ships as `notepad` |
+| `-config`  | `%LocalAppData%\zwiftboard\config.yml` | Config file path; must already exist when passed explicitly (default path is created on first run)          |
+| `-v`       | `false`                                | Force `debug` log level (raw frames, service list)                                                         |
+| `-log`     | _(none)_                               | Also write log lines to this file (truncated at startup; TUI mode defaults to `zwiftboard.log`)            |
+| `-plain`   | `false`                                | Plain log output on stderr instead of the TUI status screen                                                |
+| `-demo`    | `false`                                | TUI with mock toggle keys, no Bluetooth (try the screen anywhere)                                          |
+| `-version` | `false`                                | Print version and exit                                                                                     |
+
+### Included profiles
+
+| Profile        | Click becomes…                                                                | Source                                                                                                              |
+| -------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `mywhoosh`     | `+` gear down, `B` gear up, `A`/`Z` steer right/left, `Y` U-turn / minimal UI | [MyWhoosh shortcuts](https://mywhooshinfo.com/blog/mywhoosh-keyboard-shortcuts)                                     |
+| `mywhoosh-hd`  | same mapping as `mywhoosh`                                                    | MyWhoosh (HD build) — focuses `MyWhooshHD.exe`, auto-starts the MS Store app                                        |
+| `trainerroad`  | `A` space play/pause, `B` t mode, `Y` h heart-rate, `Z` w workout             | [TrainerRoad shortcuts](https://support.trainerroad.com/hc/en-us/articles/202806120-TrainerRoad-Keyboard-Shortcuts) |
+| `systm`        | `A` space pause, `B` `` ` `` ERG, `Y` m mute, `Z` esc close settings          | [SYSTM shortcuts](https://support.wahoofitness.com/hc/en-us/articles/4402734450322-Keyboard-Shortcuts)              |
+| `notepad`      | `+ p`, `A a`, `B b`, `Y y`, `Z z`                                             | focuses `Notepad` and starts it — the shipped default                                                               |
+
+## How it works
+
+```
+┌────────────────────────────┐        ┌───────────────────────────────────────────┐
+│   Zwift Click V2 pair      │        │              Windows PC                   │
+│                            │        │                                           │
+│   LEFT            RIGHT    │  BLE   │  zwiftboard.exe                           │
+│   [arrows -]  [Y Z A B +]  │◄──────►│   1. scan bursts (Zwift vendor filter)    │
+│                            │  GATT  │   2. connect + handshake, keepalive 3s    │
+│   frame 0x23:              │ notify │   3. decode protobuf bitmap (0=pressed)   │
+│   protobuf bitmap,         │ write  │   4. edge-triggered diff (pair MIRRORS    │
+│   0 = pressed              │ indic. │      every press on both units)           │
+│                            │        │   5. keys.Down/Up → focus target window,  │
+│                            │        │      then user32 keybd_event              │
+└────────────────────────────┘        └───────────────────┬───────────────────────┘
+                                                          │ simulated keystroke
+                                        ┌─────────────────▼───────────────────────┐
+                                        │  foreground app: MyWhoosh, Zwift,       │
+                                        │  Rouvy, TrainerRoad, SYSTM, ...         │
+                                        └─────────────────────────────────────────┘
+```
+
+1. **Scan** — endless 10s bursts (3s gap), filtered by Zwift's manufacturer ID
+   `0x094A` or a `zwift*` name.
+2. **Connect** — WinRT GATT, with a retry loop because Windows returns a
+   partial service list right after connect. Characteristics are matched by
+   UUID across _all_ services: Async `…0002` (notify), SyncRX `…0003` (write),
+   SyncTX `…0004` (indicate) of service `00000001-19ca-4651-86e5-fa29dcdd09d1`.
+3. **Handshake & keepalive** — the activation trio (`RideOn 02 03`,
+   `00 08 00`, `00 08 10`), then a `RideOn` write every 3s. The keepalive is the
+   liveness probe: a successful write proves the session is up, a failed one is
+   the only disconnect signal — idle button silence is normal and never ends a
+   session. After ~55s of button silence a single pod reset (`0x18`) reboots the
+   pod on our schedule, and the scan-gated reconnect picks it back up within
+   seconds; any received frame restarts the idle clock.
+4. **Decode** — button frames start with `0x23`; protobuf field 1 is a bitmap
+   where **0 = pressed**. Bits: `LEFT 0x1 UP 0x2 RIGHT 0x4 DOWN 0x8 A 0x10
+   B 0x20 Y 0x40 Z 0x80 MIN 0x100 PLUS 0x1000`.
+5. **Hold** — a mapped key goes **down** on the pressed transition and
+   **up** on the released one, so holding a button holds the key (steering
+   in MyWhoosh needs the left/right hold). While held, the key auto-repeats
+   like a real keyboard (250ms delay, ~33ms interval — a synthetic press is
+   otherwise a single event, so letters would not repeat in text apps).
+   The pair mirrors every press (both units send the same frame), so dedup
+   is edge-triggered: a handler only acts on bits that changed since the
+   previous frame, and an identical mirrored bitmap changes nothing. If
+   `focusProgramNamePrefixOnClick` is set, the configured window is brought
+   to the foreground before the key goes out via Windows `keybd_event`.
+
+**Both pods connected, only the right mapped.** The Click V2 ships as two pods
+that work as a _pair_: the LEFT pod is the pair's BLE anchor and the RIGHT pod
+mirrors its state to the LEFT over a private RF link. This build connects _both_
+pods — keeping the LEFT anchor connected is what keeps the RIGHT pod's link
+alive — but maps only the RIGHT pod's buttons (`Y` `Z` `A` `B` `PLUS`). Scanning
+never gives up, so a pod turned on minutes later still joins.
+
+Each controller gets its own reconnecting session goroutine (5s backoff);
+connects are serialized so they never overlap an active scan.
+
+## Troubleshooting
+
+| Symptom                                    | Fix                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Right pod drops, logs `session ended`      | The link ended (a keepalive write failed — a real disconnect), so zwiftboard reconnects after 5s. Idle button silence **never** ends a session, so sitting on one virtual gear for a long time is fine — shifting still works when you press again.                                                                                                                                                                                         |
+| Right pod's LED keeps blinking             | The pair's LEFT anchor is not connected. Switch the LEFT controller on too (both pods must be on); a lone RIGHT pod's blinking LED is cosmetic but its link drops ~65s after its last button.                                                                                                                                                                                                                                               |
+| One press holds the key down               | Normal: keys follow the button — held while pressed, released on release (steering needs the hold).                                                                                                                                                                                                                                                                                                                                         |
+| `found controller name=… addr=D4:06:0F:…`  | Normal — the advertisement may carry no name; address is what matters.                                                                                                                                                                                                                                                                                                                                                                      |
+| Controller not found                       | Press any button to wake it during the scan burst; keep it awake.                                                                                                                                                                                                                                                                                                                                                                           |
+| Keys land in the wrong window              | Set `focusProgramNamePrefixOnClick:` to the game's window title or `.exe` — zwiftboard brings it to the front and taps only into it.                                                                                                                                                                                                                                                                                                        |
+| App quits / stops responding after a while | zwiftboard never exits on a runtime fault — a glitchy BLE event logs `recovered from panic` (a `WARN` with stack) and the session retry / scan loop keeps it alive. Switching Windows Bluetooth off mid-run also survives: sessions end, scanning retries every 3s, and it reconnects when Bluetooth comes back. If buttons go silent instead, check the `session ended` lines: that is a lost connection recovering after 5s, not a crash. |
+| Nothing works with Zwift open              | Close Zwift / Companion first: one BLE connection per controller.                                                                                                                                                                                                                                                                                                                                                                           |
+
+Not a HID keyboard: Zwift itself won't see the Click as a Bluetooth keyboard
+here — only the Windows foreground app receives the simulated keys.
+
+## Development
+
+Requires Go ≥ 1.27 (see `go.mod`). No BLE hardware needed to develop: tests
+run on any OS, real scanning needs Windows.
+
+Tasks run through [`just`](https://github.com/casey/just) (required — install it
+first):
+
+| Recipe             | Does                                                            |
+| ------------------ | --------------------------------------------------------------- |
+| `just test`        | unit tests (run anywhere)                                       |
+| `just vet`         | `go vet` for the host and `GOOS=windows`                        |
+| `just fmt`         | `gofmt -w .`                                                    |
+| `just build`       | build the Windows amd64 exe (plus the icon resource)            |
+| `just sanity`      | local: `fmt` then `test` `vet` `build`                          |
+| `just ci`          | check-only `fmt-check` `vet` `test` `build`, no source rewrites |
+| `just run`         | run from source (Windows host); `go run . -v` for raw frames    |
+| `just demo`        | TUI with mock toggle keys, no Bluetooth                         |
+| `just release VERSION` | build the release assets into `dist/` (POSIX; used by CI)   |
+| `just scoop-manifest VERSION SHA256` | render the Scoop extras manifest to stdout |
+| `just scoop-release VERSION` | `release` + `dist/zwiftboard.json` (local end-to-end)  |
+| `just update-deps` | blanket `go get -u ./...` + `go mod tidy` (BLE libs included)   |
+
+`just --list` shows every recipe.
+
+### Releases and Scoop
+
+Releases are cut automatically from `main` by
+[semantic-release](https://semantic-release.gitbook.io/). A push to `main` runs
+`.github/workflows/release.yml`:
+
+1. `checks` runs `just ci` (the same check-only guards as pull requests).
+2. `release` runs semantic-release, which calls `just release <version>` to
+   build `dist/zwiftboard.exe`, `dist/zwiftboard.zip` and `dist/checksums.txt`.
+3. `scoop` runs only when semantic-release published a **new** release. It
+   downloads that release's `checksums.txt`, renders `bucket/zwiftboard.json`
+   with `just scoop-manifest <tag> <sha256>`, and opens (or updates) a PR against
+   [ScoopInstaller/Extras](https://github.com/ScoopInstaller/Extras) `master`
+   from the `SCOOP_EXTRAS_PAT` owner's fork. Nothing is pushed to Extras
+   directly — a human reviews and merges the PR.
+
+Emulate the build + manifest steps locally before pushing (Linux/WSL; macOS
+needs `coreutils` for `sha256sum`, plus `zip`):
+
+```sh
+just ci                          # the guards CI runs
+just scoop-release 0.0.0-test    # dist/zwiftboard.exe, .zip, checksums.txt, zwiftboard.json
+cat dist/zwiftboard.json         # inspect the Extras manifest
+```
+
+`just scoop-release <version>` builds the release assets and renders the
+manifest from the freshly computed sha256 — the same two steps CI splits across
+the `release` and `scoop` jobs, so a green local run proves the release job will
+find `dist/zwiftboard.exe` and the scoop job will render a valid manifest. Use a
+throwaway version (semantic-release assigns the real one) and push to `main`
+only after `just ci` is green.
+
+Layout — a single binary, entry point at the repo root:
+
+```
+main.go               flags, logger setup, target registry, wiring
+internal/zwift/       protocol facts: GATT UUIDs, button bits, frame decode
+internal/ble/         scan (Watch), connect (Session), decode, hold + cross-session dedup
+internal/keys/        config token → VK code; Down/Up/ReleaseVK (keybd_event on Windows)
+internal/config/      config.yaml: loglevel + profiles (returns errors)
+```
+
+## Next Steps
+
+- [x] Add an option to start a program (exe, script, msstore app) linked to a profile (e.g. Start MyWhoosh if exists). Update documentation.
+- [x] Convert local scripts and CI execution with just. Update documentation.
+- [x] Add just update-deps task. Update documentation.
+- [x] Profile switching with ctrl+left/right. Update documentation.
+- [x] `s` shortcut to start the profile's program manually; `r` to reload config. Widen the status panel. Update documentation.
+- [ ] Double-click to single key feature? Update documentation.

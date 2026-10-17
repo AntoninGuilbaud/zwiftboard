@@ -1,0 +1,24 @@
+{
+  "branches": ["main"],
+  "tagFormat": "${version}",
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "just release ${nextRelease.version}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          { "path": "dist/zwiftboard.exe", "label": "zwiftboard.exe" },
+          { "path": "dist/zwiftboard.zip", "label": "zwiftboard.zip (exe)" },
+          { "path": "dist/checksums.txt", "label": "checksums.txt (sha256)" }
+        ]
+      }
+    ]
+  ]
+}
