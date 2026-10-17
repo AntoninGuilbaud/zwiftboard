@@ -86,6 +86,18 @@ jobs:
     if: needs.release.outputs.published == 'true'
     runs-on: ubuntu-latest
     steps:
+      # create-pull-request does NOT fall back to GITHUB_TOKEN when the token
+      # input is empty, and GITHUB_TOKEN cannot push to another owner's fork
+      # anyway. Fail early with an actionable message instead of the action's
+      # cryptic "Input 'token' not supplied".
+      - name: Require SCOOP_EXTRAS_PAT
+        env:
+          SCOOP_EXTRAS_PAT: ${{ secrets.SCOOP_EXTRAS_PAT }}
+        run: |
+          if [ -z "$SCOOP_EXTRAS_PAT" ]; then
+            echo "::error::Secret SCOOP_EXTRAS_PAT is not set. Add a classic PAT with 'repo' scope, owned by a user who has forked ScoopInstaller/Extras, as the repository secret SCOOP_EXTRAS_PAT."
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: extractions/setup-just@v4
       - name: Checkout ScoopInstaller/Extras
