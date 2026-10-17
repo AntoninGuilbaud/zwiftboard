@@ -123,6 +123,7 @@ jobs:
             "${{ steps.hash.outputs.sha }}" \
             > extras/bucket/zwiftboard.json
       - name: Create pull request
+        id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.SCOOP_EXTRAS_PAT }}
@@ -142,3 +143,12 @@ jobs:
             Generated automatically on release. See the
             [contributing guide](https://github.com/ScoopInstaller/.github/blob/main/.github/CONTRIBUTING.md).
           delete-branch: true
+      # The CONTRIBUTING guide asks for a "/verify" comment after raising the
+      # PR to kick off the manifest verifier. Fork PRs (ours comes from
+      # <owner>/Extras) cannot be auto-verified on open, so the comment is the
+      # only trigger.
+      - name: Ask Scoop to verify the manifest
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.SCOOP_EXTRAS_PAT }}
+        run: gh pr comment "${{ steps.cpr.outputs.pull-request-number }}" --repo ScoopInstaller/Extras --body "/verify"

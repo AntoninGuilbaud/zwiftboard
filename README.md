@@ -321,7 +321,11 @@ Releases are cut automatically from `main` by
    with `just scoop-manifest <tag> <sha256>`, and opens (or updates) a PR against
    [ScoopInstaller/Extras](https://github.com/ScoopInstaller/Extras) `master`
    from the `SCOOP_EXTRAS_PAT` owner's fork. Nothing is pushed to Extras
-   directly — a human reviews and merges the PR.
+   directly — a human reviews and merges the PR. The job then posts the
+   `/verify` comment the contribution guide asks for; because the PR comes from
+   a fork, that comment (not the PR-open event) is what triggers the manifest
+   verifier. The very first manifest is a new package, which Extras wants backed
+   by an approved package-request issue before the initial PR.
 
 Emulate the build + manifest steps locally before pushing (Linux/WSL; macOS
 needs `coreutils` for `sha256sum`, plus `zip`):

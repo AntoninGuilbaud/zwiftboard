@@ -83,7 +83,12 @@ the TUI key-state model, pod states, the log buffer and the config-path tests.
   `ScoopInstaller/Extras:master` via `peter-evans/create-pull-request` pushed to
   the `SCOOP_EXTRAS_PAT` owner's fork (classic PAT, `repo` scope; the owner must
   have forked `ScoopInstaller/Extras`). Nothing is pushed to Extras directly — a
-  human merges the PR. Release assets are
+  human merges the PR. A missing `SCOOP_EXTRAS_PAT` fails the job fast with an
+  actionable message. After opening the PR the job posts the `/verify` comment
+  the CONTRIBUTING guide requires (fork PRs are not auto-verified on open). The
+  very first manifest is a NEW package: Extras wants a package-request issue
+  approved before the initial PR, which this automation cannot file for you.
+  Release assets are
   `zwiftboard.exe` / `zwiftboard.zip` / `checksums.txt`; emulate the build +
   manifest locally with `just scoop-release <version>` (needs `zip` +
   `sha256sum`).
