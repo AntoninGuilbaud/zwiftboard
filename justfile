@@ -78,6 +78,7 @@ scoop-manifest version hash:
             }
         },
         "bin": "zwiftboard.exe",
+        "shortcuts": [["zwiftboard.exe", "zwiftboard"]],
         "checkver": "github",
         "autoupdate": {
             "architecture": {

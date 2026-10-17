@@ -24,11 +24,12 @@ func TestScoopManifestRenders(t *testing.T) {
 		t.Fatalf("script failed: %v", err)
 	}
 	var m struct {
-		Version      string `json:"version"`
-		Description  string `json:"description"`
-		Homepage     string `json:"homepage"`
-		License      string `json:"license"`
-		Bin          string `json:"bin"`
+		Version      string     `json:"version"`
+		Description  string     `json:"description"`
+		Homepage     string     `json:"homepage"`
+		License      string     `json:"license"`
+		Bin          string     `json:"bin"`
+		Shortcuts    [][]string `json:"shortcuts"`
 		Architecture map[string]struct {
 			URL  string `json:"url"`
 			Hash string `json:"hash"`
@@ -60,6 +61,10 @@ func TestScoopManifestRenders(t *testing.T) {
 	}
 	if m.Bin != "zwiftboard.exe" {
 		t.Errorf("bin = %q, want zwiftboard.exe", m.Bin)
+	}
+	if len(m.Shortcuts) != 1 || len(m.Shortcuts[0]) != 2 ||
+		m.Shortcuts[0][0] != "zwiftboard.exe" || m.Shortcuts[0][1] != "zwiftboard" {
+		t.Errorf("shortcuts = %v, want [[zwiftboard.exe zwiftboard]]", m.Shortcuts)
 	}
 	if m.Checkver != "github" {
 		t.Errorf("checkver = %q, want github", m.Checkver)
