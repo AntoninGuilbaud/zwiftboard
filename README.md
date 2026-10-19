@@ -35,6 +35,12 @@ Zwift Click V2 is an inexpensive wireless BLE controller pair but Zwift locks it
 
 ## Install
 
+### From Releases
+
+Download latest version from (release page)[https://github.com/thomaschampagne/zwiftboard/releases]
+
+### From Scoop
+
 Windows users can install with [Scoop](https://scoop.sh) straight from this
 repository — it is its own bucket:
 
