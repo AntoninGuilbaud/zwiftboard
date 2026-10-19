@@ -11,6 +11,8 @@
   </p>
 </div>
 
+Why?! I needed to gear +/- in MyWhoosh using my Zwift Click v2 without paying for any other workaround software. Simple as that!
+
 Zwift Click V2 is an inexpensive wireless BLE controller pair but Zwift locks it to their app. `zwiftboard` unlocks it: connect over Bluetooth, press a button, and it **types real keyboard keys**.
 
 > **Only the RIGHT pod fires keys.** The Click V2 is a pair and zwiftboard keeps
