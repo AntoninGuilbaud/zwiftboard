@@ -15,6 +15,7 @@ import (
 	"zwiftboard/internal/config"
 	"zwiftboard/internal/keys"
 	"zwiftboard/internal/tui"
+	"zwiftboard/internal/update"
 	"zwiftboard/internal/zwift"
 )
 
@@ -84,6 +85,19 @@ func runTUI(tcfg tui.Config, start func(p *tea.Program)) {
 // only OBSERVES: the screen reads ble.Connected / ble.SideSeenRecently and the
 // OnKey hook, and nothing in a session waits on it.
 func liveFeed(p *tea.Program, cfg config.Config, state *profileState, km *ble.KeyMap) {
+	// Update check: fire once, never block or warn. A failure (offline,
+	// rate-limited, dev stamp) is simply "no update".
+	go func() {
+		latest, err := update.Latest(context.Background())
+		if err != nil {
+			slog.Debug("update check failed", "error", err)
+			return
+		}
+		if update.Newer(version, latest) {
+			p.Send(tui.UpdateMsg{Latest: latest})
+		}
+	}()
+
 	for enabled := false; !enabled; {
 		ble.Guarded("enable BLE adapter", func() {
 			if err := ble.Enable(); err != nil {
