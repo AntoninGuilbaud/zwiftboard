@@ -87,14 +87,13 @@ func TestViewUpdateChip(t *testing.T) {
 	m.cfg.Version = "1.0.1"
 	m.latest = "1.0.2"
 	v := m.View()
-	has(t, v, "1.0.1", "1.0.2", "→") // version, remote version and arrow
-	has(t, v, "→ 1.0.2")             // the chip itself, not the table's arrows
+	has(t, v, "1.0.1", "→ version 1.0.2 available") // version and the update notice
 
-	// No update result → no arrow, no second version.
+	// No update result → no notice, no second version.
 	m.latest = ""
 	v = m.View()
-	has(t, v, "1.0.1")
-	lacks(t, v, "→ 1.0.2", "1.0.2") // table rows always contain a bare "→"
+	has(t, v, "1.0.1", "version 1.0.1")
+	lacks(t, v, "→ version", "1.0.2", "available") // table rows always contain a bare "→"
 }
 
 func TestViewIntroLine(t *testing.T) {

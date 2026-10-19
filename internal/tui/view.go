@@ -164,14 +164,14 @@ func (m Model) header() string {
 	version := m.cfg.Version
 	update := ""
 	if m.latest != "" {
-		update = sWarn.Render(" → " + m.latest)
+		update = sWarn.Render(" → version " + m.latest + " available")
 	}
 
 	// Show both profile and version
 	if profile != "" && version != "" {
-		title += "  " + sChip.Render(profile) + sMuted.Render(" (version "+version+")") + update
+		title += "  " + sChip.Render(profile) + sMuted.Render(" (version "+version) + update + sMuted.Render(")")
 	} else if version != "" {
-		title += sMuted.Render(" version ") + sMuted.Render("("+version+")") + update
+		title += sMuted.Render(" version ") + sMuted.Render("(version "+version) + update + sMuted.Render(")")
 	} else if profile != "" {
 		// Show only profile if no version
 		title += "  " + sChip.Render(profile)
