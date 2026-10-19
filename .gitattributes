@@ -1,3 +1,8 @@
 # Keep Go sources LF so gofmt and the `just ci` guard behave identically on
 # every machine, regardless of a contributor's core.autocrlf setting.
 *.go text eol=lf
+
+# The bucket manifest is generated as LF and byte-compared by
+# TestBucketManifestInSync; pin it LF so a core.autocrlf=true checkout does not
+# make the test report it stale.
+bucket/*.json text eol=lf
