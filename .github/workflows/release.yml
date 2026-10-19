@@ -122,74 +122,74 @@ jobs:
             git push origin HEAD:main
           fi
 
-  scoop:
-    needs: release
-    if: needs.release.outputs.published == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      # create-pull-request does NOT fall back to GITHUB_TOKEN when the token
-      # input is empty, and GITHUB_TOKEN cannot push to another owner's fork
-      # anyway. Fail early with an actionable message instead of the action's
-      # cryptic "Input 'token' not supplied".
-      - name: Require SCOOP_EXTRAS_PAT
-        env:
-          SCOOP_EXTRAS_PAT: ${{ secrets.SCOOP_EXTRAS_PAT }}
-        run: |
-          if [ -z "$SCOOP_EXTRAS_PAT" ]; then
-            echo "::error::Secret SCOOP_EXTRAS_PAT is not set. Add a classic PAT with 'repo' scope, owned by a user who has forked ScoopInstaller/Extras, as the repository secret SCOOP_EXTRAS_PAT."
-            exit 1
-          fi
-      - uses: actions/checkout@v7
-      - uses: extractions/setup-just@v4
-      - name: Checkout ScoopInstaller/Extras
-        uses: actions/checkout@v7
-        with:
-          repository: ScoopInstaller/Extras
-          ref: master
-          path: extras
-          persist-credentials: false
-      - name: Read the release checksum
-        id: hash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release download "${{ needs.release.outputs.tag }}" --pattern checksums.txt --dir "$RUNNER_TEMP"
-          sha=$(awk '$2 == "zwiftboard.exe" { print $1 }' "$RUNNER_TEMP/checksums.txt")
-          [ -n "$sha" ] || { echo "no zwiftboard.exe hash in checksums.txt"; exit 1; }
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-      - name: Render manifest
-        run: |
-          just scoop-manifest \
-            "${{ needs.release.outputs.tag }}" \
-            "${{ steps.hash.outputs.sha }}" \
-            > extras/bucket/zwiftboard.json
-      - name: Create pull request
-        id: cpr
-        uses: peter-evans/create-pull-request@v8
-        with:
-          token: ${{ secrets.SCOOP_EXTRAS_PAT }}
-          path: extras
-          push-to-fork: ${{ github.repository_owner }}/Extras
-          base: master
-          branch: zwiftboard-${{ needs.release.outputs.tag }}
-          commit-message: "zwiftboard ${{ needs.release.outputs.tag }}"
-          title: "zwiftboard@${{ needs.release.outputs.tag }}: Add version ${{ needs.release.outputs.tag }}"
-          body: |
-            Adds the zwiftboard ${{ needs.release.outputs.tag }} manifest.
+  # scoop:
+  #   needs: release
+  #   if: needs.release.outputs.published == 'true'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     # create-pull-request does NOT fall back to GITHUB_TOKEN when the token
+  #     # input is empty, and GITHUB_TOKEN cannot push to another owner's fork
+  #     # anyway. Fail early with an actionable message instead of the action's
+  #     # cryptic "Input 'token' not supplied".
+  #     - name: Require SCOOP_EXTRAS_PAT
+  #       env:
+  #         SCOOP_EXTRAS_PAT: ${{ secrets.SCOOP_EXTRAS_PAT }}
+  #       run: |
+  #         if [ -z "$SCOOP_EXTRAS_PAT" ]; then
+  #           echo "::error::Secret SCOOP_EXTRAS_PAT is not set. Add a classic PAT with 'repo' scope, owned by a user who has forked ScoopInstaller/Extras, as the repository secret SCOOP_EXTRAS_PAT."
+  #           exit 1
+  #         fi
+  #     - uses: actions/checkout@v7
+  #     - uses: extractions/setup-just@v4
+  #     - name: Checkout ScoopInstaller/Extras
+  #       uses: actions/checkout@v7
+  #       with:
+  #         repository: ScoopInstaller/Extras
+  #         ref: master
+  #         path: extras
+  #         persist-credentials: false
+  #     - name: Read the release checksum
+  #       id: hash
+  #       env:
+  #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       run: |
+  #         gh release download "${{ needs.release.outputs.tag }}" --pattern checksums.txt --dir "$RUNNER_TEMP"
+  #         sha=$(awk '$2 == "zwiftboard.exe" { print $1 }' "$RUNNER_TEMP/checksums.txt")
+  #         [ -n "$sha" ] || { echo "no zwiftboard.exe hash in checksums.txt"; exit 1; }
+  #         echo "sha=$sha" >> "$GITHUB_OUTPUT"
+  #     - name: Render manifest
+  #       run: |
+  #         just scoop-manifest \
+  #           "${{ needs.release.outputs.tag }}" \
+  #           "${{ steps.hash.outputs.sha }}" \
+  #           > extras/bucket/zwiftboard.json
+  #     - name: Create pull request
+  #       id: cpr
+  #       uses: peter-evans/create-pull-request@v8
+  #       with:
+  #         token: ${{ secrets.SCOOP_EXTRAS_PAT }}
+  #         path: extras
+  #         push-to-fork: ${{ github.repository_owner }}/Extras
+  #         base: master
+  #         branch: zwiftboard-${{ needs.release.outputs.tag }}
+  #         commit-message: "zwiftboard ${{ needs.release.outputs.tag }}"
+  #         title: "zwiftboard@${{ needs.release.outputs.tag }}: Add version ${{ needs.release.outputs.tag }}"
+  #         body: |
+  #           Adds the zwiftboard ${{ needs.release.outputs.tag }} manifest.
 
-            - Asset: `zwiftboard.exe`
-            - sha256: `${{ steps.hash.outputs.sha }}`
-            - Homepage: https://github.com/thomaschampagne/zwiftboard
+  #           - Asset: `zwiftboard.exe`
+  #           - sha256: `${{ steps.hash.outputs.sha }}`
+  #           - Homepage: https://github.com/thomaschampagne/zwiftboard
 
-            Generated automatically on release. See the
-            [contributing guide](https://github.com/ScoopInstaller/.github/blob/main/.github/CONTRIBUTING.md).
-          delete-branch: true
-      # The CONTRIBUTING guide asks for a "/verify" comment after raising the
-      # PR to kick off the manifest verifier. Fork PRs (ours comes from
-      # <owner>/Extras) cannot be auto-verified on open, so the comment is the
-      # only trigger.
-      - name: Ask Scoop to verify the manifest
-        if: steps.cpr.outputs.pull-request-number != ''
-        env:
-          GH_TOKEN: ${{ secrets.SCOOP_EXTRAS_PAT }}
-        run: gh pr comment "${{ steps.cpr.outputs.pull-request-number }}" --repo ScoopInstaller/Extras --body "/verify"
+  #           Generated automatically on release. See the
+  #           [contributing guide](https://github.com/ScoopInstaller/.github/blob/main/.github/CONTRIBUTING.md).
+  #         delete-branch: true
+  #     # The CONTRIBUTING guide asks for a "/verify" comment after raising the
+  #     # PR to kick off the manifest verifier. Fork PRs (ours comes from
+  #     # <owner>/Extras) cannot be auto-verified on open, so the comment is the
+  #     # only trigger.
+  #     - name: Ask Scoop to verify the manifest
+  #       if: steps.cpr.outputs.pull-request-number != ''
+  #       env:
+  #         GH_TOKEN: ${{ secrets.SCOOP_EXTRAS_PAT }}
+  #       run: gh pr comment "${{ steps.cpr.outputs.pull-request-number }}" --repo ScoopInstaller/Extras --body "/verify"
