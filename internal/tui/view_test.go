@@ -82,6 +82,21 @@ func TestViewVersion(t *testing.T) {
 	}
 }
 
+func TestViewUpdateChip(t *testing.T) {
+	m := on(testCfg(), PodConnected, PodConnected)
+	m.cfg.Version = "1.0.1"
+	m.latest = "1.0.2"
+	v := m.View()
+	has(t, v, "1.0.1", "1.0.2", "→") // version, remote version and arrow
+	has(t, v, "→ 1.0.2")             // the chip itself, not the table's arrows
+
+	// No update result → no arrow, no second version.
+	m.latest = ""
+	v = m.View()
+	has(t, v, "1.0.1")
+	lacks(t, v, "→ 1.0.2", "1.0.2") // table rows always contain a bare "→"
+}
+
 func TestViewIntroLine(t *testing.T) {
 	v := on(testCfg(), PodOff, PodConnected).View()
 	has(t, v, "WAITING", "Both controllers must be ON")

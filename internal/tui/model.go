@@ -90,6 +90,9 @@ type (
 	PodMsg struct{ Left, Right PodState }
 	// FocusMsg reports whether the configured focus window currently exists.
 	FocusMsg bool
+	// UpdateMsg reports a newer release found by the startup check. Sent at
+	// most once; empty Latest clears the chip.
+	UpdateMsg struct{ Latest string }
 	// ProfileMsg reports the profile now active after a switch request. Err,
 	// when set, is shown on the status line and changes nothing else. Reload is
 	// set when the same profile was re-read from disk, so the screen can say so.
@@ -122,8 +125,9 @@ type Model struct {
 	showLogs     bool
 	status       string // transient feedback line (empty = none)
 	statusID     int
-	logOffset    int  // lines scrolled up from the newest; 0 = following the bottom
-	focusMissing bool // default false: no alert until a FocusMsg says so
+	logOffset    int    // lines scrolled up from the newest; 0 = following the bottom
+	focusMissing bool   // default false: no alert until a FocusMsg says so
+	latest       string // newer release tag from UpdateMsg; "" = none/dev
 }
 
 // New returns a model with Bluetooth off, both pods not detected and no key
@@ -228,6 +232,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.bt = bool(msg)
 	case FocusMsg:
 		m.focusMissing = !bool(msg)
+	case UpdateMsg:
+		m.latest = msg.Latest
 	case PodMsg:
 		m.left, m.right = msg.Left, msg.Right
 	case ProfileMsg:

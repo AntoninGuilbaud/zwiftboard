@@ -162,13 +162,16 @@ func (m Model) header() string {
 		profile += " " + strconv.Itoa(m.cfg.ProfileIndex+1) + "/" + strconv.Itoa(len(m.cfg.Profiles))
 	}
 	version := m.cfg.Version
+	update := ""
+	if m.latest != "" {
+		update = sWarn.Render(" → " + m.latest)
+	}
 
 	// Show both profile and version
 	if profile != "" && version != "" {
-		title += "  " + sChip.Render(profile) + sMuted.Render(" (version "+version+")")
+		title += "  " + sChip.Render(profile) + sMuted.Render(" (version "+version+")") + update
 	} else if version != "" {
-		// Show version number in parentheses if no profile
-		title += sMuted.Render(" version ") + sMuted.Render("("+version+")")
+		title += sMuted.Render(" version ") + sMuted.Render("("+version+")") + update
 	} else if profile != "" {
 		// Show only profile if no version
 		title += "  " + sChip.Render(profile)

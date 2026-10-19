@@ -28,6 +28,15 @@ func TestUpdateBTMsg(t *testing.T) {
 	}
 }
 
+func TestUpdateMsgSetsLatest(t *testing.T) {
+	m := New(testCfg())
+	nm, _ := m.Update(UpdateMsg{Latest: "1.0.2"})
+	mm := nm.(Model)
+	if mm.latest != "1.0.2" {
+		t.Errorf("latest = %q, want %q", mm.latest, "1.0.2")
+	}
+}
+
 // clock returns a model with a fake clock and presses/releases helpers.
 func keyModel() (Model, *time.Time) {
 	now := time.Now()
