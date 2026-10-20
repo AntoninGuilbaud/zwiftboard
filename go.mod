@@ -30,7 +30,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.31 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/saltosystems/winrt-go v0.0.0-20261015065339-8ef619c103a3 // indirect
+	github.com/saltosystems/winrt-go v0.0.0-20261016124014-b298124d7472 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/soypat/cyw43439 v0.1.2-0.20260731160358-f2a6af121857 // indirect
 	github.com/soypat/lneto v0.4.0 // indirect
@@ -40,5 +40,5 @@ require (
 	github.com/xo/terminfo v1.2.0 // indirect
 	golang.org/x/exp v0.0.0-20261014143641-f0251eb4aa3e // indirect
 	golang.org/x/sync v0.24.0 // indirect
-	tinygo.org/x/espradio v0.3.0 // indirect
+	tinygo.org/x/espradio v0.4.0 // indirect
 )
