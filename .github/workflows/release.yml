@@ -50,7 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "tag=$(gh release view --json tagName -q .tagName 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+          echo "tag=$(gh release list --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
       # No baseline tag is seeded: with no prior semver tag semantic-release's
       # first release is 1.0.0 regardless of commit types. Seeding a 1.0.0 tag
       # instead made it the "previous release", so the first `feat` shipped
@@ -70,7 +70,7 @@ jobs:
           BEFORE: ${{ steps.before.outputs.tag }}
         run: |
           for i in 1 2 3; do
-            after=$(gh release view --json tagName -q .tagName) && break
+            after=$(gh release list --limit 1 --json tagName -q '.[0].tagName') && break
             sleep 3
           done
           [ -n "$after" ] || { echo "could not read the latest release"; exit 1; }
@@ -86,7 +86,7 @@ jobs:
   # release — no PAT, no PR. Independent of the Extras job below.
   bucket:
     needs: release
-    if: needs.release.outputs.published == 'true'
+    if: needs.release.outputs.published == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write # push the manifest commit
