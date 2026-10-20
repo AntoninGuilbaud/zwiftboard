@@ -42,11 +42,17 @@ loglevel: info
 #   insert, home, end, pageup, pagedown, shift, ctrl, alt, capslock
 #   and punctuation: - = , . / ; ' [ ] ` \
 #
-# Shortcuts verified against each vendor's docs (2026-10-07):
-#   mywhoosh    mywhooshinfo.com/blog/mywhoosh-keyboard-shortcuts
-#   trainerroad support.trainerroad.com "TrainerRoad Keyboard Shortcuts"
-#   systm       support.wahoofitness.com "Keyboard shortcuts" (SYSTM)
-# Apps checked and excluded: FulGaz (no shortcuts), BKOOL (undocumented).
+# Shortcuts verified against each vendor's docs (2026-10-20):
+#   mywhoosh      mywhooshinfo.com/blog/mywhoosh-keyboard-shortcuts
+#   trainerroad   support.trainerroad.com "TrainerRoad Keyboard Shortcuts"
+#   systm         support.wahoofitness.com "Keyboard shortcuts" (SYSTM)
+#   zwift         support.zwift.com "Keyboard Shortcuts"
+#   trainingpeaks help.trainingpeaks.com "TrainingPeaks Virtual Controls and Keyboard Shortcuts"
+#   biketerra     biketerra.com/help-center/virtual-shifting (W/S); menu arrows + U from BikeControl's Biketerra keymap
+#   rouvy         support.rouvy.com "Remote controllers and control mapping"
+#   tacx          Garmin FAQ aFNaNhVBpF1wKTKB40LYg7 + the app's Settings -> Keyboard Shortcuts screen
+# Apps checked and excluded: FulGaz (no in-ride keys), Strappo (Apple-only, no
+# Windows build, no keyboard shortcuts), BKOOL (undocumented).
 #
 # BOTH PODS CONNECTED, RIGHT POD MAPPED: the Click V2 is a pair and zwiftboard
 # keeps BOTH pods connected — the LEFT pod is the pair's BLE anchor and letting
@@ -104,3 +110,54 @@ profiles:
     Z: esc          # close settings menu
     focusProgramNamePrefixOnClick: null
     startProgram: null
+
+  # Zwift: no official keyboard gear keys — PageUp/PageDown is the workout FTP
+  # bias (the closest thing to shifting), Y mirrors the Zwift Play's Y
+  # power-up button, arrows turn at junctions.
+  zwift:
+    PLUS: pagedown   # workout FTP bias down (easier)
+    A: right         # turn right at a junction
+    B: pageup        # workout FTP bias up (harder)
+    Y: space         # activate a power-up
+    Z: left          # turn left at a junction
+    focusProgramNamePrefixOnClick: "ZwiftApp"   # Zwift's .exe name
+
+  # TrainingPeaks Virtual: +/- adjusts base trainer resistance (and workout
+  # difficulty), arrows turn, G toggles the power/HR/cadence graph.
+  trainingpeaks:
+    PLUS: "-"        # decrease base trainer resistance (easier)
+    A: right         # turn right / tack right
+    B: "="           # increase base trainer resistance (harder)
+    Y: g             # toggle power/HR/cadence graph
+    Z: left          # turn left / tack left
+    focusProgramNamePrefixOnClick: null
+
+  # Biketerra: W/S shift the virtual drivetrain (official virtual-shifting
+  # help), arrows navigate the menu, U toggles the UI.
+  biketerra:
+    PLUS: s          # shift to an easier gear
+    A: right         # menu / steer right
+    B: w             # shift to a harder gear
+    Y: u             # toggle the UI
+    Z: left          # menu / steer left
+    focusProgramNamePrefixOnClick: null   # browser or native app window
+
+  # Rouvy: comma/period are the desktop keyboard's default shift keys.
+  rouvy:
+    PLUS: ","        # shift down
+    A: right         # turn right at a junction
+    B: "."           # shift up
+    Y: h             # hide interface
+    Z: left          # turn left at a junction
+    focusProgramNamePrefixOnClick: null
+
+  # Tacx Training (MS Store): the app's own Settings -> Keyboard Shortcuts
+  # screen: arrows change difficulty/views, space pauses. Esc ("Quit
+  # Training") is deliberately NOT mapped — one press would end the session.
+  tacx:
+    PLUS: down       # decrease difficulty
+    A: right         # next training view
+    B: up            # increase difficulty
+    Y: space         # pause / resume training
+    Z: left          # previous training view
+    focusProgramNamePrefixOnClick: "Tacx"   # window title or TacxTraining.exe

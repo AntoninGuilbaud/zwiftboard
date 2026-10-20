@@ -20,7 +20,7 @@ Zwift Click V2 is an inexpensive wireless BLE controller pair but Zwift locks it
 > (`Y` `Z` `A` `B` `PLUS`). The LEFT pod's arrows/minus are not used — it just
 > has to stay switched on so the pair's link stays alive.
 
-- **Any program works** - MyWhoosh (with shifting, steering, cameras, ...), TrainerRoad, Wahoo SYSTM, or any executable you can map.
+- **Any program works** - MyWhoosh (with shifting, steering, cameras, ...), Zwift, TrainingPeaks Virtual, Biketerra, Rouvy, Tacx Training, TrainerRoad, Wahoo SYSTM, or any executable you can map.
 - **No tricks** - no Zwift account, no 24h controller unlock. Works out of the box.
 - **Free** - no paid features, no subscriptions like some others implementations.
 - **Profiles** - configurable with pre-built profiles per platform.
@@ -204,25 +204,30 @@ sequences (kitty/CSI-u); the `ctrl+n` / `ctrl+p` fallbacks work everywhere.
 zwiftboard [flags]
 ```
 
-| Flag       | Default                                | Meaning                                                                                                    |
-| ---------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `-p`       | config `defaultProfile:`, else `mywhoosh` | Startup profile (must exist in the config; unknown name errors with the list). Ships as `notepad` |
-| `-config`  | `%LocalAppData%\zwiftboard\config.yml` | Config file path; must already exist when passed explicitly (default path is created on first run)          |
-| `-v`       | `false`                                | Force `debug` log level (raw frames, service list)                                                         |
-| `-log`     | _(none)_                               | Also write log lines to this file (truncated at startup; TUI mode defaults to `zwiftboard.log`)            |
-| `-plain`   | `false`                                | Plain log output on stderr instead of the TUI status screen                                                |
-| `-demo`    | `false`                                | TUI with mock toggle keys, no Bluetooth (try the screen anywhere)                                          |
-| `-version` | `false`                                | Print version and exit                                                                                     |
+| Flag       | Default                                   | Meaning                                                                                            |
+| ---------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `-p`       | config `defaultProfile:`, else `mywhoosh` | Startup profile (must exist in the config; unknown name errors with the list). Ships as `notepad`  |
+| `-config`  | `%LocalAppData%\zwiftboard\config.yml`    | Config file path; must already exist when passed explicitly (default path is created on first run) |
+| `-v`       | `false`                                   | Force `debug` log level (raw frames, service list)                                                 |
+| `-log`     | _(none)_                                  | Also write log lines to this file (truncated at startup; TUI mode defaults to `zwiftboard.log`)    |
+| `-plain`   | `false`                                   | Plain log output on stderr instead of the TUI status screen                                        |
+| `-demo`    | `false`                                   | TUI with mock toggle keys, no Bluetooth (try the screen anywhere)                                  |
+| `-version` | `false`                                   | Print version and exit                                                                             |
 
 ### Included profiles
 
-| Profile        | Click becomes…                                                                | Source                                                                                                              |
-| -------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `mywhoosh`     | `+` gear down, `B` gear up, `A`/`Z` steer right/left, `Y` U-turn / minimal UI | [MyWhoosh shortcuts](https://mywhooshinfo.com/blog/mywhoosh-keyboard-shortcuts)                                     |
-| `mywhoosh-hd`  | same mapping as `mywhoosh`                                                    | MyWhoosh (HD build) — focuses `MyWhooshHD.exe`, auto-starts the MS Store app                                        |
-| `trainerroad`  | `A` space play/pause, `B` t mode, `Y` h heart-rate, `Z` w workout             | [TrainerRoad shortcuts](https://support.trainerroad.com/hc/en-us/articles/202806120-TrainerRoad-Keyboard-Shortcuts) |
-| `systm`        | `A` space pause, `B` `` ` `` ERG, `Y` m mute, `Z` esc close settings          | [SYSTM shortcuts](https://support.wahoofitness.com/hc/en-us/articles/4402734450322-Keyboard-Shortcuts)              |
-| `notepad`      | `+ p`, `A a`, `B b`, `Y y`, `Z z`                                             | focuses `Notepad` and starts it — the shipped default                                                               |
+| Profile         | Click becomes…                                                                | Source                                                                                                                                                  |
+| --------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mywhoosh`      | `+` gear down, `B` gear up, `A`/`Z` steer right/left, `Y` U-turn / minimal UI | [MyWhoosh shortcuts](https://mywhooshinfo.com/blog/mywhoosh-keyboard-shortcuts)                                                                         |
+| `mywhoosh-hd`   | same mapping as `mywhoosh`                                                    | MyWhoosh (HD build) — focuses `MyWhooshHD.exe`, auto-starts the MS Store app                                                                            |
+| `trainerroad`   | `A` space play/pause, `B` t mode, `Y` h heart-rate, `Z` w workout             | [TrainerRoad shortcuts](https://support.trainerroad.com/hc/en-us/articles/202806120-TrainerRoad-Keyboard-Shortcuts)                                     |
+| `systm`         | `A` space pause, `B` `` ` `` ERG, `Y` m mute, `Z` esc close settings          | [SYSTM shortcuts](https://support.wahoofitness.com/hc/en-us/articles/4402734450322-Keyboard-Shortcuts)                                                  |
+| `zwift`         | `+`/`B` FTP bias down/up, `A`/`Z` turn right/left, `Y` power-up               | [Zwift shortcuts](https://support.zwift.com/en_us/keyboard-shortcuts-rkGrgwd4B)                                                                         |
+| `trainingpeaks` | `-`/`=` resistance down/up, `A`/`Z` turn right/left, `Y` graph toggle         | [TrainingPeaks Virtual controls](https://help.trainingpeaks.com/hc/en-us/articles/31340399556877-TrainingPeaks-Virtual-Controls-and-Keyboard-Shortcuts) |
+| `biketerra`     | `S`/`W` gear down/up, `A`/`Z` menu right/left, `Y` UI toggle                  | [Biketerra virtual shifting](https://biketerra.com/help-center/virtual-shifting)                                                                        |
+| `rouvy`         | `,`/`.` gear down/up, `A`/`Z` turn right/left, `Y` hide interface             | [Rouvy remote controllers](https://support.rouvy.com/hc/en-us/articles/47742964491665-Remote-controllers-and-control-mapping)                           |
+| `tacx`          | `+`/`B` difficulty down/up, `A`/`Z` next/previous screen, `Y` pause           | [Tacx keyboard shortcuts](https://support.garmin.com/en-US/?faq=aFNaNhVBpF1wKTKB40LYg7)                                                                 |
+| `notepad`       | `+ p`, `A a`, `B b`, `Y y`, `Z z`                                             | focuses `Notepad` and starts it — the shipped default                                                                                                   |
 
 ## How it works
 
@@ -307,20 +312,20 @@ run on any OS, real scanning needs Windows.
 Tasks run through [`just`](https://github.com/casey/just) (required — install it
 first):
 
-| Recipe             | Does                                                            |
-| ------------------ | --------------------------------------------------------------- |
-| `just test`        | unit tests (run anywhere)                                       |
-| `just vet`         | `go vet` for the host and `GOOS=windows`                        |
-| `just fmt`         | `gofmt -w .`                                                    |
-| `just build`       | build the Windows amd64 exe (plus the icon resource)            |
-| `just sanity`      | local: `fmt` then `test` `vet` `build`                          |
-| `just ci`          | check-only `fmt-check` `vet` `test` `build`, no source rewrites |
-| `just run`         | run from source (Windows host); `go run . -v` for raw frames    |
-| `just demo`        | TUI with mock toggle keys, no Bluetooth                         |
-| `just release VERSION` | build the release assets into `dist/` (POSIX; used by CI)   |
-| `just scoop-manifest VERSION SHA256` | render the Scoop extras manifest to stdout |
-| `just scoop-release VERSION` | `release` + `dist/zwiftboard.json` (local end-to-end)  |
-| `just update-deps` | blanket `go get -u ./...` + `go mod tidy` (BLE libs included)   |
+| Recipe                               | Does                                                            |
+| ------------------------------------ | --------------------------------------------------------------- |
+| `just test`                          | unit tests (run anywhere)                                       |
+| `just vet`                           | `go vet` for the host and `GOOS=windows`                        |
+| `just fmt`                           | `gofmt -w .`                                                    |
+| `just build`                         | build the Windows amd64 exe (plus the icon resource)            |
+| `just sanity`                        | local: `fmt` then `test` `vet` `build`                          |
+| `just ci`                            | check-only `fmt-check` `vet` `test` `build`, no source rewrites |
+| `just run`                           | run from source (Windows host); `go run . -v` for raw frames    |
+| `just demo`                          | TUI with mock toggle keys, no Bluetooth                         |
+| `just release VERSION`               | build the release assets into `dist/` (POSIX; used by CI)       |
+| `just scoop-manifest VERSION SHA256` | render the Scoop extras manifest to stdout                      |
+| `just scoop-release VERSION`         | `release` + `dist/zwiftboard.json` (local end-to-end)           |
+| `just update-deps`                   | blanket `go get -u ./...` + `go mod tidy` (BLE libs included)   |
 
 `just --list` shows every recipe.
 
